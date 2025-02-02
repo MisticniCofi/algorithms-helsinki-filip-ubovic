@@ -11,10 +11,10 @@ import numpy as np
 import rustworkx as rx
 
 class Ants:
-    def __init__(self, NO_ANTS):
+    def __init__(self, NO_ANTS, MAX_ROUTE_LENGTH):
         #initial path traveresed by ant is 0
         self.costs = np.zeros(shape = NO_ANTS)
-        self.routes = np.ones((NO_ANTS,20), dtype=np.int16)*-1
+        self.routes = np.ones((NO_ANTS,MAX_ROUTE_LENGTH), dtype=np.int16)*-1
         self.routes[:,0] = 0
         self.route_length = np.zeros(shape = NO_ANTS, dtype=np.int8)
 
@@ -97,12 +97,16 @@ def visit(ants, unvisited_nodes, choice_matrix):
  
 def evaporate(t,EVAPORATION_RATE):
     return (1-EVAPORATION_RATE)*t
+
+""" chooses 3 best ants, so make sure that you have at least 3 ants"""
 def dump_pheromone(t, EVAPORATION_RATE, PHEROMONE_DELTA, ants):
     min_inds = np.argsort(ants.costs)
     for i in range(3):
-        for j in (range(ants.route_length[min_inds[i]]-1)):
+        for j in (range(ants.route_length[min_inds[i]])):
             frm, to = ants.routes[min_inds[i]][j], ants.routes[min_inds[i]][j+1]
-            t[frm,to] += PHEROMONE_DELTA / ants.costs[min_inds[i]]
+            t[frm,to] += PHEROMONE_DELTA*2 / ants.costs[min_inds[i]]
+        
+    
     return t
 def update_pheromone(t, EVAPORATION_RATE, PHEROMONE_DELTA, ants):
     t = evaporate(t, EVAPORATION_RATE)
@@ -119,22 +123,32 @@ def evaluate_solution(no_ants,cost_matrix, distance_matrix):
 
 def aco_tour(graph, NO_STORES, NO_ANTS, ants, distance_matrix, cm):
     unvisited_nodes = np.arange(1,NO_STORES)
+   
     while len(unvisited_nodes) > 0:
         (current_node, next_node, chosen_ant) = visit(ants, unvisited_nodes, cm)
-       
+        #print(sum(ants.route_length))
+        
+        
         ants.costs[chosen_ant] += distance(graph[current_node], graph[next_node])
         ants.route_length[chosen_ant] += 1
         ants.routes[chosen_ant][ants.route_length[chosen_ant]] = next_node
         unvisited_nodes = np.delete(unvisited_nodes,np.where(unvisited_nodes == next_node))
     
     
-    
-    
+        
+        
+        #all ants have to go home at the end of the run
+        #add 0 as a last node in the route
+        #add cost of going there
         if(len(unvisited_nodes) == 0):
             for i, ant in enumerate(ants.costs):
                 index = np.where(ants.routes[i] == -1)[0][0]
                 last_node = ants.routes[i][index-1]
                 ants.costs[i] += distance(graph[last_node], graph[0])
+                ants.route_length[i] +=1
+                ants.routes[i][index] = 0
+          
+        
     return (evaluate_solution(NO_ANTS, ants.costs, distance_matrix), ants)
 
 

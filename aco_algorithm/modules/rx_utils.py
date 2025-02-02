@@ -34,3 +34,6 @@ def random_gen(n):
         graph.add_edge(0, ind+1,aco.distance(graph[0],graph[ind+1]))
         
     return graph
+
+def add_edges(graph):
+    dists = aco.get_distance_matrix(graph)
